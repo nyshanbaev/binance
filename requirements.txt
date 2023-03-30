@@ -1,1 +1,7 @@
 ccxt
+lxml
+beautifulsoup4
+pandas
+requests
+numpy
+binance

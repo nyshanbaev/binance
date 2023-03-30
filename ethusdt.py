@@ -1,36 +1,49 @@
 from binance import Client
 import time
 import numpy as np
+import pandas as pd
+import requests
+
+
+ETHUSDT = 'https://api.binance.com/api/v3/klines?symbol=ETHUSDT&interval=1s&limit=5'
+BTCUSDT = 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1s&limit=5'
 
 client = Client(api_key='your_api_key', api_secret='your_api_secret')
 
-eth_list = []
-btc_list = []
 free_eth = []
+start_time = time.time()
 
 while True:
+
+    current_time = time.time()
     eth_usd_futures = client.futures_recent_trades(symbol='ETHUSDT')
-    btc_usd_futures = client.futures_recent_trades(symbol='BTCUSDT')
     eth_usd_futures_price = float(eth_usd_futures[-1]['price'])
-    btc_usd_futures_price = float(btc_usd_futures[-1]['price'])
     print(eth_usd_futures_price)
-    eth_list.append(eth_usd_futures_price)
-    btc_list.append(btc_usd_futures_price)
 
-    if len(eth_list) > 10:
-        corr_matrix = np.corrcoef(eth_list[-10:], btc_list[-10:])
-        correlation = corr_matrix[0, 1]
+    def parse_data(url):
+        data = requests.get(url).json()
+        df = pd.DataFrame(data)
+        df = df.iloc[:,:6]
+        col_names = ['time', 'open', 'high', 'low', 'close', 'volume']
+        df.columns = col_names
+        df['time'] = pd.to_datetime(df['time'], unit='ms')
+        df.set_index('time', inplace=True)
+        for col in df.columns:
+            df[col] = df[col].astype(float)
+        return df
 
-        print(f'Correlation between ETHUSD and BTCUSDT: {correlation}')
+    eth_df = parse_data(ETHUSDT)
+    btc_df = parse_data(BTCUSDT)
 
-        if correlation < 0.5:
-            print(f'Correlation is small: {correlation}')
-            free_eth.append(eth_usd_futures_price)
-            print(f'Adding ETHUSD price to list:{eth_usd_futures_price}')
-            time.sleep(1)
-        else:
-            time.sleep(0.5)
-    if len(free_eth) > 40:
+    corr_matrix = np.corrcoef(eth_df['close'], btc_df['close'])
+    corr = corr_matrix[0,1]
+
+    print(f"Correlation between ETHUSDT and BTCUSDT: {corr}")
+
+    if corr < 0.2 and corr > -0.2:
+        free_eth.append(eth_usd_futures_price)
+    
+    if current_time - start_time >= 3600:
         prev_price = free_eth[0]
 
         for price in free_eth[1:]:
@@ -55,6 +68,8 @@ while True:
         print(f"ATR: {atr}")
         free_eth.clear()
         tr_list.clear()
+        start_time = current_time
 
-    else:
-        time.sleep(0.5)
+
+    print(free_eth)
+    time.sleep(5)

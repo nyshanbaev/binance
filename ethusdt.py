@@ -30,7 +30,7 @@ while True:
             time.sleep(1)
         else:
             time.sleep(0.5)
-    if len(free_eth) > 5:
+    if len(free_eth) > 40:
         prev_price = free_eth[0]
 
         for price in free_eth[1:]:

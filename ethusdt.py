@@ -70,6 +70,4 @@ while True:
         tr_list.clear()
         start_time = current_time
 
-
-    print(free_eth)
-    time.sleep(5)
+    time.sleep(0.5)
